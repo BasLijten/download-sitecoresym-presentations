@@ -3,27 +3,31 @@ Function Download-Presentations
     #Set security protocol
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     $loginUrl = "https://sitecoresymposium2018.smarteventscloud.com/connect/processLogin.do"
-    #$loginUrl = "https://sitecoresymposium2018.smarteventscloud.com/connect/loginDialog.ww"
+
+    #initial request for login page - get all cookies as well
+    #set session variable to share all cookeis and other session variables
     $response = Invoke-WebRequest -Uri $loginUrl -SessionVariable 'sessionVars'    
 
     $credentials = @{
-        #'pageUrl'='https://sitecoresymposium2018.smarteventscloud.com/connect/publicDashboard.ww';
+        
         'username'= 'BobbyHack';
         'password'='SitecoreSymposium2018WasAwesome!';
     }
 
-    #$sendCredentialsUrl  = "https://sitecoresymposium2018.smarteventscloud.com/connect/loginDialog.ww"
+    #send credentials
     $sendCredentialsUrl = "https://sitecoresymposium2018.smarteventscloud.com/connect/processLogin.do"
-    $headers = @{
-
-    }
+    
+    #response will have the auth cookies
     $loginResponse = Invoke-WebRequest -Uri $sendCredentialsUrl -Method Post -Body $credentials -WebSession $sessionVars    
 
-    #searching
+    #open search page
     $searchUri = "https://sitecoresymposium2018.smarteventscloud.com/connect/search.ww"
     $searchResult = Invoke-WebRequest -Uri $searchUri -WebSession $sessionVars
     
+    #already got all session ID's - don't have to parse the HTML :D    
     $sessions = Get-Content ".\sessionIDs.txt"
+
+    #foreach session, get the download link (behind authroization)
     foreach($session in $sessions)
     {
 
@@ -43,12 +47,15 @@ Function Download-Presentations
 
         $reply = Invoke-WebRequest -Uri $pptUri -Method POST -Body $postParams -WebSession $sessionVars    
 
+        #parse the returned message. This is hard, as it is javascript with some json inside it. The javascript needs to be stripped and the json needs to be parsed
         $tempVar = ConvertFrom-String $reply.Content
         $json = '{\"data\":' + $tempVar.P11 + 'kb\"}]}'  
     
+        #unescape the json
         $unescaped = [System.Text.RegularExpressions.Regex]::Unescape($json)
         $parsedObject = ConvertFrom-Json $unescaped
-
+        
+        #get the download url and download the session
         Invoke-WebRequest -Uri $parsedObject.data[0].url -OutFile "D:\symp\$($session).pdf"
 
         #Start-BitsTransfer -Source $parsedObject.data[0].url -Destination "D:\symp\"
