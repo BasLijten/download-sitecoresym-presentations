@@ -53,8 +53,10 @@ Function Download-Presentations
         $unescaped = [System.Text.RegularExpressions.Regex]::Unescape($json)
         $parsedObject = ConvertFrom-Json $unescaped
 
+		#save with the original fileName
+		$fileName = $parsedObject.data[0].name
         #get the download url and download the session
-        Invoke-WebRequest -Uri $parsedObject.data[0].url -OutFile "D:\symp\$($session).pdf"
+        Invoke-WebRequest -Uri $parsedObject.data[0].url -OutFile "D:\symp\$($fileName)"
 
         #Start-BitsTransfer -Source $parsedObject.data[0].url -Destination "D:\symp\"
     }
